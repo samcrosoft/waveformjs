@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+    <script src="../dist/js/waveform.js"></script>
+</head>
+<body>
+<div id="sampleWaveform" style="height: 90px; width: 100%"></div>
+<script>
+    $(document).ready(function () {
+        $.getJSON("./data.json", function (data) {
+            var oControl = $("#sampleWaveform");
+            var iWaveFormWidth = oControl.width();
+            if (oControl[0]) {
+                o = new Waveform({
+                    container: oControl[0],
+                    data: data,
+                    width: iWaveFormWidth,
+                    trackLength: 217, // for wonder wizkid
+                    reflection: 0.1,
+                    waveWidth: 2,
+                    interpolate: true
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

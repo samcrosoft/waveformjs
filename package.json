@@ -1,0 +1,34 @@
+{
+  "name": "waveformjs",
+  "version": "1.0.0",
+  "description": "A library to build soundcloud like waveforms",
+  "main": "dist/waveform.js",
+  "homepage": "https://github.com/samcrosoft/waveformjs",
+  "scripts": {
+    "build": "gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samcrosoft/waveformjs"
+  },
+  "keywords": [
+    "waveformjs",
+    "soundcloud",
+    "waveform",
+    "waveform-soundcloud"
+  ],
+  "author": "Samuel Olowofela",
+  "license": "MIT",
+  "devDependencies": {
+    "del": "^1.2.0",
+    "gulp": "^3.9.0",
+    "gulp-autoprefixer": "^2.3.1",
+    "gulp-babel": "^5.1.0",
+    "gulp-bower": "0.0.13",
+    "gulp-coffee": "^2.3.1",
+    "gulp-concat": "^2.6.0",
+    "gulp-header": "^1.2.2",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^1.5.1"
+  }
+}

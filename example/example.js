@@ -7,10 +7,7 @@ $(document).ready(function () {
         //var iWaveFormWidth = oControl.width();
         var iWaveFormWidth = 800;
         var iWaveformHeight = 90;
-        //var oControl = newDiv();
-        //console.log(oControl);
         if (!0) {
-            console.log(data);
             window.o = new Waveform({
                 container: oControl[0],
                 data: data,
@@ -51,7 +48,6 @@ $(document).ready(function () {
         this.reflection = 0;
         this.play = function(){
             var iVal = 0;
-            console.log("playing should start here now!");
             this.oInterval = setInterval(function(){
                 window.o.playProgress(iVal);
                 iVal += 1;

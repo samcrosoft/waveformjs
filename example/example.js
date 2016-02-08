@@ -50,11 +50,16 @@ $(document).ready(function () {
         this.waveWidth = 2;
         this.reflection = 0;
         this.play = function(){
+            var iVal = 0;
             console.log("playing should start here now!");
-            window.o.play()
+            this.oInterval = setInterval(function(){
+                window.o.playProgress(iVal);
+                iVal += 1;
+            }, 1000);
+
         };
         this.pause = function(){
-            window.o.pause()
+            clearInterval(this.oInterval);
         }
     };
 

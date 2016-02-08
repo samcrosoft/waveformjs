@@ -59,6 +59,11 @@ gulp.task('coffee', function () {
         .pipe(gulp.dest(distDir + '/js/'));
 });
 
+// Watch
+gulp.task('watch', ['coffee'], function() {
+    gulp.watch('./src/**/*', ['coffee']);
+});
+
 // Defaults
 gulp.task('build', ['coffee']);
 gulp.task('default', ['build']);

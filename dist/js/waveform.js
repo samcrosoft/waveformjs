@@ -1,7 +1,7 @@
 /**
- * vue-tooltip - A plugin to implement tooltip using Vue.js
- * @version v0.1.0
- * @link https://github.com/samcrosoft/vue-tooltip
+ * waveformjs - A library to build soundcloud like waveforms
+ * @version v1.0.0
+ * @link https://github.com/samcrosoft/waveformjs
  * @license MIT
  */
 
@@ -114,7 +114,42 @@ window.requestAnimFrame = (function() {
 })();
 
 Waveform = (function(superClass) {
+
+  /*
+  create color constants
+   */
   extend(Waveform, superClass);
+
+  Waveform.WAVE_FOCUS = 'wave-focus';
+
+  Waveform.WAVE = 'wave';
+
+  Waveform.WAVE_ACTIVE = 'wave-active';
+
+  Waveform.WAVE_SELECTED = 'wave-selected';
+
+  Waveform.GUTTER = 'gutter';
+
+  Waveform.GUTTER_ACTIVE = 'gutter-active';
+
+  Waveform.GUTTER_SELECTED = 'gutter-selected';
+
+  Waveform.REFLECTION = 'reflection';
+
+  Waveform.REFLECTION_ACTIVE = 'reflection-active';
+
+
+  /*
+  create events constants
+   */
+
+  Waveform.EVENT_READY = "ready";
+
+  Waveform.EVENT_CLICK = "click";
+
+  Waveform.EVENT_HOVER = "hover";
+
+  Waveform.EVENT_RESIZED = "hover";
 
   function Waveform(options) {
     this.onMouseDown = bind(this.onMouseDown, this);
@@ -129,7 +164,12 @@ Waveform = (function(superClass) {
     this.wavesCollection = this.data;
     this.outerColor = options.outerColor || 'transparent';
     this.reflection = options.reflection || 0;
-    this.interpolate = true;
+    this.interpolate = options.interpolate || true;
+    this.bindResize = options.bindResize || false;
+
+    /*
+      Cater for data interpolation right here
+     */
     if (options.interpolate === false) {
       this.interpolate = false;
     }
@@ -157,41 +197,51 @@ Waveform = (function(superClass) {
   }
 
   Waveform.prototype.initialize = function() {
-    this.setColors();
     this.updateHeight();
-    this.update();
+    this.setColors();
+    this.bindEventHandlers();
+    this.cache();
     this.redraw();
-    this.bindContainerResize();
-    this.fireEvent('ready');
+    if (this.bindResize === true) {
+      this.bindContainerResize();
+    }
+    this.fireEvent(Waveform.EVENT_READY);
   };
+
+
+  /*
+    this will make sure the container is bound to resize event
+   */
 
   Waveform.prototype.bindContainerResize = function() {
     window.addEventListener("resize", (function(_this) {
       return function() {
-        console.log("resive event occured", _this.container.clientWidth, "outer is " + _this.outerColor);
-        _this.clear();
-        _this.width = _this.container.clientWidth;
-        _this.canvas = null;
-        _this.context = null;
-        $(_this.container).empty();
-        _this.canvas = _this.createCanvas(_this.container, _this.width, _this.container.clientHeight);
-        _this.context = _this.canvas.getContext('2d');
-        _this.update();
-        return _this.redraw();
+        var iContWidth;
+        iContWidth = _this.container.clientWidth;
+        _this.update({
+          width: iContWidth
+        });
+        _this.redraw();
+        return _this.notify(Waveform.EVENT_RESIZED, iContWidth);
       };
     })(this));
   };
 
+
+  /*
+    this method will set the colors to the main colors
+   */
+
   Waveform.prototype.setColors = function() {
-    this.setColor('wave-focus', '#333333');
-    this.setGradient('wave', ['#666666', 0, '#868686', 1]);
-    this.setGradient('wave-active', ['#FF3300', 0, '#FF5100', 1]);
-    this.setGradient('wave-selected', ['#993016', 0, '#973C15', 1]);
-    this.setGradient('gutter', ['#6B6B6B', 0, '#c9c9c9', 1]);
-    this.setGradient('gutter-active', ['#FF3704', 0, '#FF8F63', 1]);
-    this.setGradient('gutter-selected', ['#9A371E', 0, '#CE9E8A', 1]);
-    this.setColor('reflection', '#999999');
-    this.setColor('reflection-active', '#FFC0A0');
+    this.setColor(Waveform.WAVE_FOCUS, '#333333');
+    this.setGradient(Waveform.WAVE, ['#666666', 0, '#868686', 1]);
+    this.setGradient(Waveform.WAVE_ACTIVE, ['#FF3300', 0, '#FF5100', 1]);
+    this.setGradient(Waveform.WAVE_SELECTED, ['#993016', 0, '#973C15', 1]);
+    this.setGradient(Waveform.GUTTER, ['#6B6B6B', 0, '#c9c9c9', 1]);
+    this.setGradient(Waveform.GUTTER_ACTIVE, ['#FF3704', 0, '#FF8F63', 1]);
+    this.setGradient(Waveform.GUTTER_SELECTED, ['#9A371E', 0, '#CE9E8A', 1]);
+    this.setColor(Waveform.REFLECTION, '#999999');
+    this.setColor(Waveform.REFLECTION_ACTIVE, '#FFC0A0');
   };
 
   Waveform.prototype.setColor = function(name, color) {
@@ -200,8 +250,6 @@ Waveform = (function(superClass) {
 
   Waveform.prototype.setGradient = function(name, colors) {
     var gradient, i;
-    this.iRefelection = 0.3;
-    this.waveOffset = Math.round(this.height - (this.height * this.iRefelection));
     gradient = this.context.createLinearGradient(0, this.waveOffset, 0, 0);
     i = 0;
     while (i < colors.length) {
@@ -211,11 +259,10 @@ Waveform = (function(superClass) {
     this.colors[name] = gradient;
   };
 
-  Waveform.prototype.updateHeight = function() {
-    this.waveOffset = Math.round(this.height - (this.height * this.reflection));
-    this.reflectionHeight = Math.round(this.height - this.waveOffset);
-    this.waveHeight = this.height - this.reflectionHeight;
-  };
+
+  /*
+   This will draw the waveform
+   */
 
   Waveform.prototype.redraw = function() {
     requestAnimationFrame(this.render);
@@ -223,23 +270,15 @@ Waveform = (function(superClass) {
 
   Waveform.prototype.render = function() {
     var d, dNext, gutterX, i, j, len, ref, reflectionHeight, results, t, xPos, yPos;
-    d = void 0;
-    i = void 0;
-    j = void 0;
-    len = void 0;
-    ref = void 0;
-    results = void 0;
-    t = void 0;
-    this.clear();
     i = 0;
     ref = this.wavesCollection;
     t = this.width / this.data.length;
     xPos = 0;
     yPos = this.waveOffset;
-    this.context.clearRect(xPos, yPos, this.width, this.height);
-    results = [];
+    this.clear();
     j = 0;
     len = ref.length;
+    results = [];
     while (j < len) {
       d = ref[j];
       dNext = ref[j + 1];
@@ -248,11 +287,11 @@ Waveform = (function(superClass) {
       Draw the wave here
        */
       if (this.selected > 0 && (this.selected <= j && j < this.active) || (this.selected > j && j >= this.active)) {
-        this.context.fillStyle = this.colors['wave-selected'];
+        this.context.fillStyle = this.colors[Waveform.WAVE_SELECTED];
       } else if (this.active > j) {
-        this.context.fillStyle = this.colors['wave-active'];
+        this.context.fillStyle = this.colors[Waveform.WAVE_ACTIVE];
       } else {
-        this.context.fillStyle = this.colors['wave-focus'];
+        this.context.fillStyle = this.colors[Waveform.WAVE_FOCUS];
       }
       this.context.fillRect(xPos, yPos, this.waveWidth, d);
 
@@ -260,11 +299,11 @@ Waveform = (function(superClass) {
       draw the gutter
        */
       if (this.selected > 0 && (this.selected <= j && j < this.active) || (this.selected > j && j >= this.active)) {
-        this.context.fillStyle = this.colors['gutter-selected'];
+        this.context.fillStyle = this.colors[Waveform.GUTTER_SELECTED];
       } else if (this.active > j) {
-        this.context.fillStyle = this.colors['gutter-active'];
+        this.context.fillStyle = this.colors[Waveform.GUTTER_ACTIVE];
       } else {
-        this.context.fillStyle = this.colors['gutter'];
+        this.context.fillStyle = this.colors[Waveform.GUTTER];
       }
       gutterX = Math.max(d, dNext);
       this.context.fillRect(xPos + this.waveWidth, yPos, this.iGutterWidth, gutterX);
@@ -275,15 +314,14 @@ Waveform = (function(superClass) {
       if (this.reflection > 0) {
         reflectionHeight = Math.abs(d) / (1 - this.reflection) * this.reflection;
         if (this.active > i) {
-          this.context.fillStyle = this.colors['reflection-active'];
+          this.context.fillStyle = this.colors[Waveform.REFLECTION_ACTIVE];
         } else {
-          this.context.fillStyle = this.colors['reflection'];
+          this.context.fillStyle = this.colors[Waveform.REFLECTION];
         }
         this.context.fillRect(xPos, yPos, this.waveWidth, reflectionHeight);
       }
-      results.push(i++);
       xPos += this.waveWidth + this.iGutterWidth;
-      j++;
+      results.push(j++);
     }
     return results;
   };
@@ -296,7 +334,7 @@ Waveform = (function(superClass) {
 
 
   /*
-   Data related ideas here
+   Data related codes
    */
 
   Waveform.prototype.setData = function(data) {
@@ -351,7 +389,7 @@ Waveform = (function(superClass) {
     newData = void 0;
     springFactor = void 0;
     tmp = void 0;
-    newData = new Array;
+    newData = [];
     springFactor = new Number((data.length - 1) / (fitCount - 1));
     newData[0] = data[0];
     i = 1;
@@ -391,13 +429,60 @@ Waveform = (function(superClass) {
     return newDataBlocks;
   };
 
-  Waveform.prototype.update = function() {
+  Waveform.prototype.cache = function() {
     if (this.interpolate === false) {
       this.setDataCropped(this.data);
     } else {
       this.setDataInterpolated(this.data);
     }
     this.wavesCollection = this.putDataIntoWaveBlock(this.data);
+  };
+
+
+  /*
+    Data update details here
+   */
+
+  Waveform.prototype.update = function(options) {
+    if (options) {
+      if (options.gutterWidth) {
+        this.gutterWidth = options.gutterWidth;
+      }
+      if (options.waveWidth) {
+        this.waveWidth = options.waveWidth;
+      }
+      if (options.width) {
+        this.width = options.width;
+        this.canvas.width = this.width;
+      }
+      if (options.height) {
+        this.height = options.height;
+        this.canvas.height = this.height;
+      }
+      if (options.reflection === 0 || options.reflection) {
+        this.reflection = options.reflection;
+      }
+      if (options.interpolate) {
+        this.interpolate = this.options.interpolate;
+      }
+
+      /*
+        Re-calculate the wave block formations once one of the following is altered
+       */
+      if (options.gutterWidth || options.waveWidth || options.width || options.height || options.reflection || options.interpolate || options.reflection === 0) {
+        this.cache();
+      }
+      if (options.height || options.reflection || options.reflection === 0) {
+        this.updateHeight();
+      }
+    }
+    this.redraw();
+  };
+
+  Waveform.prototype.updateHeight = function() {
+    this.waveOffset = Math.round(this.height - (this.height * this.reflection));
+    this.reflectionHeight = Math.round(this.height - this.waveOffset);
+    this.waveHeight = this.height - this.reflectionHeight;
   };
 
   Waveform.prototype.createCanvas = function(container, width, height) {
@@ -433,18 +518,6 @@ Waveform = (function(superClass) {
     this.notify(name, data);
   };
 
-  Waveform.prototype.oldfireEvent = function(name) {
-    var args;
-    if (!this.events[name]) {
-      return;
-    }
-    args = [].splice.call(arguments, 0);
-    args[0] = this;
-    this.events[name].e.forEach(function(event) {
-      event.apply(null, args);
-    });
-  };
-
   Waveform.prototype.bindEventHandlers = function() {
     this.canvas.addEventListener('mousedown', this.onMouseDown);
     this.canvas.addEventListener('mousemove', this.onMouseOver);
@@ -467,7 +540,7 @@ Waveform = (function(superClass) {
     x = aPos[0];
     waveClicked = this.getWaveClicked(x);
     mousePosTrackTime = this.getMousePosTrackTime(x);
-    this.fireEvent('hover', mousePosTrackTime, waveClicked);
+    this.fireEvent(Waveform.EVENT_HOVER, mousePosTrackTime, waveClicked);
     if (this.isDragging === true) {
       this.selected = -1;
       this.clickPercent = x / this.width;
@@ -500,7 +573,7 @@ Waveform = (function(superClass) {
     aPos = this.getMouseClickPosition(e);
     x = aPos[0];
     this.clickPercent = x / this.width;
-    this.fireEvent('click', this.clickPercent * 100);
+    this.fireEvent(Waveform.EVENT_CLICK, this.clickPercent * 100);
     this.active = this.calcPercent();
     this.redraw();
   };

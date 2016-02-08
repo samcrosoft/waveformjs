@@ -10,11 +10,31 @@ window.requestAnimFrame = do ->
 #    start of waveform class
 class Waveform extends Observable
 
+  ###
+  create color constants
+  ###
+  Waveform.WAVE_FOCUS = 'wave-focus'
+  Waveform.WAVE = 'wave'
+  Waveform.WAVE_ACTIVE = 'wave-active'
+  Waveform.WAVE_SELECTED = 'wave-selected'
+  Waveform.GUTTER = 'gutter'
+  Waveform.GUTTER_ACTIVE = 'gutter-active'
+  Waveform.GUTTER_SELECTED = 'gutter-selected'
+  Waveform.REFLECTION = 'reflection'
+  Waveform.REFLECTION_ACTIVE = 'reflection-active'
+
+  ###
+  create events constants
+  ###
+  Waveform.EVENT_READY = "ready"
+  Waveform.EVENT_CLICK = "click"
+  Waveform.EVENT_HOVER = "hover"
+  Waveform.EVENT_RESIZED = "hover"
+
   constructor: (options) ->
 # initiate observable
     super()
 
-    # @redraw = __bind(@redraw, this)
     @container = options.container
     @canvas = options.canvas
 
@@ -22,9 +42,13 @@ class Waveform extends Observable
     @wavesCollection = @data
 
     @outerColor = options.outerColor or 'transparent'
-    @reflection = options.reflection || 0
-    @interpolate = true
+    @reflection = options.reflection or 0
+    @interpolate = options.interpolate or true
+    @bindResize  = options.bindResize or false
 
+    ###
+      Cater for data interpolation right here
+    ###
     if options.interpolate == false
       @interpolate = false
     if not @canvas
@@ -69,91 +93,66 @@ class Waveform extends Observable
 
     return
 
-# initialize the whole process
+  # initialize the whole process
   initialize: () ->
-# set the colors
-    @setColors()
-
     # update height
     @updateHeight()
 
-    # bind the event handler
-#    @bindEventHandlers()
+    # set the colors
+    @setColors()
 
-    # update the process
-    @update()
+
+    # bind the event handler
+    @bindEventHandlers()
+
+    # Cache the waveform data
+    @cache()
 
     # draw the waveform
     @redraw()
 
     # bind event for container redraw
-    @bindContainerResize()
+    if @bindResize is on then @bindContainerResize()
 
-    @fireEvent('ready')
+    @fireEvent(Waveform.EVENT_READY)
 
     return
 
 
 
+  ###
+    this will make sure the container is bound to resize event
+  ###
   bindContainerResize: () ->
     window.addEventListener("resize", ()=>
-      console.log("resive event occured", @container.clientWidth, "outer is #{@outerColor}")
-      @clear()
-      @width = @container.clientWidth
-      @canvas = null;
-      @context = null;
-      $(@container).empty()
-
-      # create a new canvas
-      @canvas = @createCanvas(@container, @width, @container.clientHeight)
-      @context = @canvas.getContext('2d')
-
-      @update()
+      iContWidth = @container.clientWidth
+      @update(width:iContWidth )
       @redraw()
+      @notify(Waveform.EVENT_RESIZED, iContWidth)
     )
     return
 
 
+  ###
+    this method will set the colors to the main colors
+  ###
   setColors: () ->
-
-#
-#@todo - style this appropriately
-#
-#    @setColor('wave-focus', '#00171F')
-#    @setGradient('wave', ['#0042A5', 0, '#002B6D', 1])
-#    @setColor('wave-active', "#0042A5")
-#    @setGradient('wave-selected', ['#993016', 0, '#973C15', 1])
-#
-#    @setGradient('gutter', ['#6B6B6B', 0, '#c9c9c9', 1])
-#    @setGradient('gutter-active', ['#FF3704', 0, '#FF8F63', 1])
-#    @setGradient('gutter-selected', ['#9A371E', 0, '#CE9E8A', 1])
-#    @setColor('reflection', '#e40615')
-#    @setColor('reflection-active', '#fff')
-
-#        => ORIGINAL COLORS SETTINGS <=
-    @setColor('wave-focus', '#333333')
-    @setGradient('wave', ['#666666', 0, '#868686', 1])
-    @setGradient('wave-active', ['#FF3300', 0, '#FF5100', 1])
-    @setGradient('wave-selected', ['#993016', 0, '#973C15', 1])
-    @setGradient('gutter', ['#6B6B6B', 0, '#c9c9c9', 1])
-    @setGradient('gutter-active', ['#FF3704', 0, '#FF8F63', 1])
-    @setGradient('gutter-selected', ['#9A371E', 0, '#CE9E8A', 1])
-    @setColor('reflection', '#999999')
-    @setColor('reflection-active', '#FFC0A0')
+    @setColor(Waveform.WAVE_FOCUS, '#333333')
+    @setGradient(Waveform.WAVE, ['#666666', 0, '#868686', 1])
+    @setGradient(Waveform.WAVE_ACTIVE, ['#FF3300', 0, '#FF5100', 1])
+    @setGradient(Waveform.WAVE_SELECTED, ['#993016', 0, '#973C15', 1])
+    @setGradient(Waveform.GUTTER, ['#6B6B6B', 0, '#c9c9c9', 1])
+    @setGradient(Waveform.GUTTER_ACTIVE, ['#FF3704', 0, '#FF8F63', 1])
+    @setGradient(Waveform.GUTTER_SELECTED, ['#9A371E', 0, '#CE9E8A', 1])
+    @setColor(Waveform.REFLECTION, '#999999')
+    @setColor(Waveform.REFLECTION_ACTIVE, '#FFC0A0')
 
     return
 
-  # set the color
   setColor: (name, color) ->
     @colors[name] = color
 
-# check this also
   setGradient: (name, colors) ->
-    # calculate the waveoffset correctly -> for now, use
-    @iRefelection = 0.3
-#    @iRefelection = 0
-    @waveOffset = Math.round(@height - (@height * @iRefelection))
-
     gradient = @context.createLinearGradient(0, @waveOffset, 0, 0)
     i = 0
 
@@ -164,34 +163,22 @@ class Waveform extends Observable
     return
 
 
-  updateHeight: () ->
-    @waveOffset = Math.round(@height - (@height * @reflection))
-    @reflectionHeight = Math.round(@height - @waveOffset)
-    @waveHeight = @height - @reflectionHeight
-    return
 
 
+
+  ###
+   This will draw the waveform
+  ###
   redraw: () ->
     requestAnimationFrame (@render)
-#    @render()
     return
 
 
-  # this will draw the waveform really
+# this will draw the waveform really
   render: () =>
-    d = undefined
-    i = undefined
-    j = undefined
-    len = undefined
-    ref = undefined
-    results = undefined
-    t = undefined
-    @clear()
 
 
     i = 0
-    #ref = @data
-    # use pushed block instead
     ref = @wavesCollection
 
 
@@ -203,13 +190,11 @@ class Waveform extends Observable
 
 
     # clear the entire canvas for redraw
-    @context.clearRect xPos, yPos, @width, @height
+    @clear()
 
-    results = []
     j = 0
     len = ref.length
     while j < len
-      # start customization from here
       d = ref[j]
       dNext = ref[j + 1]
 
@@ -217,11 +202,11 @@ class Waveform extends Observable
       Draw the wave here
       ###
       if @selected > 0 and (@selected <= j and j < @active) or (@selected > j and j >= @active)
-        @context.fillStyle = @colors['wave-selected']
+        @context.fillStyle = @colors[Waveform.WAVE_SELECTED]
       else if @active > j
-        @context.fillStyle = @colors['wave-active']
+        @context.fillStyle = @colors[Waveform.WAVE_ACTIVE]
       else
-        @context.fillStyle = @colors['wave-focus']
+        @context.fillStyle = @colors[Waveform.WAVE_FOCUS]
       @context.fillRect xPos, yPos, @waveWidth, d
 
 
@@ -230,11 +215,11 @@ class Waveform extends Observable
       ###
       # if is hovered
       if @selected > 0 and (@selected <= j and j < @active) or (@selected > j and j >= @active)
-        @context.fillStyle = @colors['gutter-selected']
+        @context.fillStyle = @colors[Waveform.GUTTER_SELECTED]
       else if @active > j
-        @context.fillStyle = @colors['gutter-active']
+        @context.fillStyle = @colors[Waveform.GUTTER_ACTIVE]
       else
-        @context.fillStyle = @colors['gutter']
+        @context.fillStyle = @colors[Waveform.GUTTER]
       # smallest wave between butter is gutters height
       # note: Math.max because wave values are negative
       gutterX = Math.max d, dNext
@@ -248,21 +233,17 @@ class Waveform extends Observable
       if @reflection > 0
         reflectionHeight = Math.abs(d) / (1 - (@reflection)) * @reflection
         if @active > i
-          @context.fillStyle = @colors['reflection-active']
+          @context.fillStyle = @colors[Waveform.REFLECTION_ACTIVE]
         else
-          @context.fillStyle = @colors['reflection']
+          @context.fillStyle = @colors[Waveform.REFLECTION]
 
         # draw reflection
         @context.fillRect xPos, yPos, @waveWidth, reflectionHeight
-
-
-      results.push i++
 
       #increment the x-axis position
       xPos += @waveWidth + @iGutterWidth
 
       j++
-    results
 
 
   clear: () ->
@@ -272,10 +253,12 @@ class Waveform extends Observable
 
 
   ###
-   Data related ideas here
+   Data related codes
   ###
+
   setData: (data) ->
     @data = data
+
   getData: () ->
     @data
 
@@ -316,7 +299,7 @@ class Waveform extends Observable
     newData = undefined
     springFactor = undefined
     tmp = undefined
-    newData = new Array
+    newData = []
     springFactor = new Number((data.length - 1) / (fitCount - 1))
     newData[0] = data[0]
     i = 1
@@ -331,7 +314,6 @@ class Waveform extends Observable
     newData
 
 
-#make a way to call this independently
   putDataIntoWaveBlock: () ->
     iWaveBlock = @waveWidth + @iGutterWidth
     data = @getData()
@@ -360,7 +342,7 @@ class Waveform extends Observable
     newDataBlocks
 
 
-  update: () ->
+  cache: () ->
     if @interpolate == false
       @setDataCropped @data
     else
@@ -369,6 +351,44 @@ class Waveform extends Observable
     # split the data into waves collection
     @wavesCollection = @putDataIntoWaveBlock @data
 
+    return
+
+
+  ###
+    Data update details here
+  ###
+  update: (options) ->
+    if options
+      if options.gutterWidth
+        @gutterWidth = options.gutterWidth
+      if options.waveWidth
+        @waveWidth = options.waveWidth
+      if options.width
+        @width = options.width
+        @canvas.width = @width
+      if options.height
+        @height = options.height
+        @canvas.height = @height
+      if options.reflection == 0 or options.reflection
+        @reflection = options.reflection
+      if options.interpolate
+        @interpolate = @options.interpolate
+      ###
+        Re-calculate the wave block formations once one of the following is altered
+      ###
+      if options.gutterWidth or options.waveWidth or options.width or options.height or options.reflection or options.interpolate or options.reflection == 0
+        @cache()
+      if options.height or options.reflection or options.reflection == 0
+        @updateHeight()
+
+    #redraw the waveform
+    @redraw()
+    return
+
+  updateHeight: () ->
+    @waveOffset = Math.round(@height - (@height * @reflection))
+    @reflectionHeight = Math.round(@height - @waveOffset)
+    @waveHeight = @height - @reflectionHeight
     return
 
 # patchCanvasForIE = (canvas) ->
@@ -409,19 +429,9 @@ class Waveform extends Observable
   calcPercent: ->
     Math.round @clickPercent * @width / (@waveWidth + @iGutterWidth)
 
-# new fire event to use observables
+  # new fire event to use observables
   fireEvent: (name, data...) ->
     @notify(name, data)
-    return
-
-  oldfireEvent: (name) ->
-    if !@events[name]
-      return
-    args = [].splice.call(arguments, 0)
-    args[0] = this
-    @events[name].e.forEach (event) ->
-      event.apply null, args
-      return
     return
 
 # bind the event handlers
@@ -448,7 +458,7 @@ class Waveform extends Observable
 
     waveClicked = @getWaveClicked(x)
     mousePosTrackTime = @getMousePosTrackTime(x)
-    @fireEvent 'hover', mousePosTrackTime, waveClicked
+    @fireEvent Waveform.EVENT_HOVER, mousePosTrackTime, waveClicked
 
 
     if @isDragging == true
@@ -480,7 +490,7 @@ class Waveform extends Observable
     @clickPercent = x / @width
 
     # this will fire the percentage clicked on the waveform
-    @fireEvent 'click', (@clickPercent * 100)
+    @fireEvent Waveform.EVENT_CLICK, (@clickPercent * 100)
     @active = @calcPercent()
 
     @redraw()
@@ -511,4 +521,5 @@ class Waveform extends Observable
       fReturn = mousePosTrackTime
     fReturn
 
-#`export default Waveform`
+
+#if typeof module is "object" and module.exports then `export default Waveform`

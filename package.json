@@ -1,8 +1,8 @@
 {
   "name": "waveformjs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A library to build soundcloud like waveforms",
-  "main": "dist/waveform.js",
+  "main": "./dist/js/waveform.js",
   "homepage": "https://github.com/samcrosoft/waveformjs",
   "scripts": {
     "build": "gulp"
@@ -15,23 +15,28 @@
     "waveformjs",
     "soundcloud",
     "waveform",
-    "waveform-soundcloud"
+    "waveform-soundcloud",
+    "javascript",
+    "browser",
+    "wrapper",
+    "umd"
   ],
   "author": "Samuel Olowofela",
   "license": "MIT",
   "devDependencies": {
+    "babel-preset-es2015": "^6.5.0",
+    "babelify": "^7.2.0",
     "browserify": "^13.0.0",
+    "coffeeify": "^2.0.1",
     "del": "^1.2.0",
     "gulp": "^3.9.0",
     "gulp-babel": "^5.1.0",
-    "gulp-bower": "0.0.13",
     "gulp-concat": "^2.6.0",
     "gulp-header": "^1.2.2",
     "gulp-rename": "^1.2.2",
     "gulp-uglify": "^1.5.1",
     "vinyl-buffer": "^1.0.0",
-    "vinyl-source-stream": "^1.1.0",
-    "coffeeify": "^2.0.1"
+    "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
     "observant": "^1.0.0"

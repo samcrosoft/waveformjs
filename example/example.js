@@ -8,7 +8,7 @@ $(document).ready(function () {
         var iWaveFormWidth = 800;
         var iWaveformHeight = 90;
         if (!0) {
-            window.o = new Waveform({
+            window.o = new window.Waveform({
                 container: oControl[0],
                 data: data,
                 width: iWaveFormWidth,

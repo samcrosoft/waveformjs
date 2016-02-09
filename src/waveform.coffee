@@ -557,4 +557,6 @@ class Waveform extends Observant
 
 
 #if typeof module is "object" and module.exports then `export default Waveform`
-#`export default Waveform`
+module.exports = Waveform
+# export waveform to window
+global.window.Waveform = Waveform

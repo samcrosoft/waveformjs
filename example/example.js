@@ -21,7 +21,12 @@ $(document).ready(function () {
             });
 
             window.o.observe(Waveform.EVENT_RESIZED, function(iWidth){
-                console.log("width changed to ", iWidth);
+                //console.log("width changed to ", iWidth);
+            });
+
+            window.o.observe(Waveform.EVENT_CLICK, function(iWidth){
+                //console.log("mouse down clicked")
+                window.o.playProgress(1);
             });
         }
     });
@@ -56,6 +61,7 @@ $(document).ready(function () {
         };
         this.pause = function(){
             clearInterval(this.oInterval);
+            window.o.pause();
         }
     };
 

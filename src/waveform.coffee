@@ -1,3 +1,4 @@
+Observant = require('observant')
 ###
     requestAnimFrame shim
   copy the one from paul irish
@@ -8,7 +9,7 @@ window.requestAnimFrame = do ->
     return
 
 #    start of waveform class
-class Waveform extends Observable
+class Waveform extends Observant
 
   ###
   create color constants
@@ -84,6 +85,7 @@ class Waveform extends Observable
 
     #is playing
     @isPlaying = false
+    @hasStartedPlaying = null
 
     #is in focus
     @isFocus = false
@@ -448,11 +450,14 @@ class Waveform extends Observable
     return
 
   onMouseUp: (e) =>
-#		@skipTo()   # check from here
     @isDragging = false
     return
 
   onMouseOver: (e) =>
+    # do not perform hover animation if waveform is paused
+    if @hasStartedPlaying is on and @isPaused() is on
+      return on
+
     aPos = @getMouseClickPosition(e)
     x = aPos[0]
 
@@ -470,19 +475,6 @@ class Waveform extends Observable
     @redraw()
     return
 
-  ###
-    this is to simulate play
-###
-  playProgress: (perct) ->
-    iActive = Math.round((perct / 100 ) * @wavesCollection.length)
-    @active = iActive
-    @redraw()
-    return
-
-# this is relative to the waves collection
-  calcPercent: ->
-    Math.round @clickPercent * @width / (@waveWidth + @iGutterWidth)
-
   onMouseDown: (e) =>
     @isDragging = true
     aPos = @getMouseClickPosition(e)
@@ -495,6 +487,49 @@ class Waveform extends Observable
 
     @redraw()
     return
+
+  ###
+    this is to simulate play
+###
+  setPlaying : (val = on) ->
+    @isPlaying = val
+    return
+
+  setPaused : () ->
+    @setPlaying off
+    return
+
+  isPaused : () ->
+    @active > 0 and @isPlaying is off
+
+  # an alias to play progress
+  play: (perct) ->
+    @playProgress(perct)
+    return
+
+  pause: () ->
+    @setPaused()
+    console.log "is paused is ", @isPaused()
+    return
+
+  playProgress: (perct) ->
+    # indicate that it has started playing
+    if @hasStartedPlaying is null
+      @hasStartedPlaying = on
+
+    # set playing to true
+    if @isPlaying is off
+      @setPlaying on
+
+    iActive = Math.round((perct / 100 ) * @wavesCollection.length)
+    @active = iActive
+    @redraw()
+    return
+
+  # this is relative to the waves collection
+  calcPercent: ->
+    Math.round @clickPercent * @width / (@waveWidth + @iGutterWidth)
+
 
   getWaveClicked: (x) ->
     waveClicked = Math.round(x / (@waveWidth + @iGutterWidth))
@@ -509,7 +544,6 @@ class Waveform extends Observable
 
     fReturn
 
-# - remove this
   getMousePosTrackTime: (x) ->
     mousePosTrackTime = @trackLength / @wavesCollection.length * @getWaveClicked(x)
     fReturn = 0
@@ -523,3 +557,4 @@ class Waveform extends Observable
 
 
 #if typeof module is "object" and module.exports then `export default Waveform`
+#`export default Waveform`

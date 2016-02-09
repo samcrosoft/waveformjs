@@ -9,12 +9,12 @@ var rename = require('gulp-rename');
 var header = require('gulp-header');
 var uglify = require('gulp-uglify');
 var bower = require('gulp-bower');
-var coffee = require('gulp-coffee');
 var concat = require('gulp-concat');
-
-var onError = function (err) {
-    console.log(err);
-};
+var buffer = require('vinyl-buffer');
+var browserify = require('browserify');
+var coffeeify = require('coffeeify');
+var source = require('vinyl-source-stream');
+var umd = require('gulp-wrap-umd');
 
 /*
  * Variables
@@ -29,7 +29,10 @@ var banner = ['/**',
     ' * @license <%= pkg.license %>',
     ' */',
     ''].join('\n');
-
+var umdOptions = {
+    exports: 'Waveform',
+    namespace: 'Waveform'
+};
 // Clear
 gulp.task('clear', function () {
     del.sync([distDir]);
@@ -43,25 +46,35 @@ gulp.task('bower', function () {
 
 // Javascript
 gulp.task('coffee', function () {
-    gulp.src(['./src/observable.coffee', './src/waveform.coffee'])
-        .pipe(coffee({bare: true})).on('error', onError)
-        .pipe(concat('all.js'))
-        //.pipe(babel())
+    // set up the browserify instance on a task basis
+    var b = browserify({
+        entries: './src/waveform.coffee',
+        debug: true,
+        transform: [coffeeify]
+    });
+
+    b.bundle()
+        .pipe(source("all.js"))
+        .pipe(buffer())
         .pipe(header(banner, {pkg: pkg}))       // add header banner
 
         // Original
+        .pipe(umd(umdOptions))
         .pipe(rename({basename: 'waveform'}))
-        .pipe(gulp.dest(distDir + '/js/'))
+        .pipe(gulp.dest(distDir + '/js/'));
+});
 
-        // Minified
+// minify result
+gulp.task('minify', function () {
+    gulp.src('./dist/js/waveform.js')
         .pipe(uglify())
-        .pipe(rename({suffix: '.min'}))
+        .pipe(rename({basename: 'waveform', suffix: '.min'}))
         .pipe(gulp.dest(distDir + '/js/'));
 });
 
 // Watch
-gulp.task('watch', ['coffee'], function() {
-    gulp.watch('./src/**/*', ['coffee']);
+gulp.task('watch', ['coffee'], function () {
+    gulp.watch('./src/**/*', ['coffee', 'minify']);
 });
 
 // Defaults

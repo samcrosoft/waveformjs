@@ -1,6 +1,6 @@
 {
   "name": "waveformjs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A library to build soundcloud like waveforms",
   "main": "./dist/js/waveform.js",
   "homepage": "https://github.com/samcrosoft/waveformjs",

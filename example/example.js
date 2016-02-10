@@ -17,6 +17,7 @@ $(document).ready(function () {
                 reflection: 0.1,
                 waveWidth: 2,
                 interpolate: true,
+                fadeOpacity: 0.888,
                 bindResize: true    // to make the waveform bind to the resize event of the window!!
             });
 

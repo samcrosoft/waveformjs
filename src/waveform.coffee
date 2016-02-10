@@ -11,6 +11,10 @@ window.requestAnimFrame = do ->
 #    start of waveform class
 class Waveform extends Observant
 
+  # opacity settings
+  Waveform.DEFAULT_MAX_OPACITY = 1
+  Waveform.DEFAULT_MIN_OPACITY = 0.2
+
   ###
   create color constants
   ###
@@ -45,7 +49,13 @@ class Waveform extends Observant
     @outerColor = options.outerColor or 'transparent'
     @reflection = options.reflection or 0
     @interpolate = options.interpolate or true
-    @bindResize  = options.bindResize or false
+    @bindResize = options.bindResize or false
+    @fadeOpacity = options.fadeOpacity or Waveform.DEFAULT_MAX_OPACITY
+
+    if(isNaN(@fadeOpacity))
+      throw new Error 'Fade Opacity Can Only Be A Number'
+    else if @fadeOpacity < Waveform.DEFAULT_MIN_OPACITY or @fadeOpacity > Waveform.DEFAULT_MAX_OPACITY
+      throw new Error "Fade Opacity Can Only Be A Number Between #{Waveform.DEFAULT_MIN_OPACITY} and #{Waveform.DEFAULT_MAX_OPACITY}"
 
     ###
       Cater for data interpolation right here
@@ -57,7 +67,7 @@ class Waveform extends Observant
         @canvas = @createCanvas(@container, options.width or @container.clientWidth,
           options.height or @container.clientHeight)
       else
-        throw 'Either canvas or container option must be passed'
+        throw new Error 'Either canvas or container option must be passed'
 
     # add this for real in production to support IE
     # @patchCanvasForIE @canvas
@@ -95,9 +105,9 @@ class Waveform extends Observant
 
     return
 
-  # initialize the whole process
+# initialize the whole process
   initialize: () ->
-    # update height
+# update height
     @updateHeight()
 
     # set the colors
@@ -128,7 +138,7 @@ class Waveform extends Observant
   bindContainerResize: () ->
     window.addEventListener("resize", ()=>
       iContWidth = @container.clientWidth
-      @update(width:iContWidth )
+      @update(width: iContWidth)
       @redraw()
       @notify(Waveform.EVENT_RESIZED, iContWidth)
     )
@@ -178,8 +188,6 @@ class Waveform extends Observant
 
 # this will draw the waveform really
   render: () =>
-
-
     i = 0
     ref = @wavesCollection
 
@@ -431,7 +439,7 @@ class Waveform extends Observant
   calcPercent: ->
     Math.round @clickPercent * @width / (@waveWidth + @iGutterWidth)
 
-  # new fire event to use observables
+# new fire event to use observables
   fireEvent: (name, data...) ->
     @notify(name, data)
     return
@@ -446,16 +454,29 @@ class Waveform extends Observant
 
   onMouseOut: (e) =>
     @selected = -1
-    @redraw()
+    @redrawWithAlpha(1) # redraw back to full opacity
     return
 
   onMouseUp: (e) =>
     @isDragging = false
     return
 
+
+# this will be true if the waveform has been paused after it has started playing
+  isPausedAfterPlaying: () ->
+    return @hasStartedPlaying is on and @isPaused() is on
+
+  # redraw the canvas with alpha
+  redrawWithAlpha: (iAlpha = Waveform.DEFAULT_MAX_OPACITY) ->
+    # if the alpha has changed, then redraw
+    if iAlpha isnt @fadeOpacity
+      @context.globalAlpha = iAlpha
+      @redraw()
+
   onMouseOver: (e) =>
-    # do not perform hover animation if waveform is paused
-    if @hasStartedPlaying is on and @isPaused() is on
+# do not perform hover animation if waveform is paused
+    if @isPausedAfterPlaying()
+      @redrawWithAlpha(@fadeOpacity) # redraw with faded opacity
       return on
 
     aPos = @getMouseClickPosition(e)
@@ -472,6 +493,8 @@ class Waveform extends Observant
       @active = @calcPercent()
     else
       @selected = waveClicked
+
+    @context.globalAlpha = 1
     @redraw()
     return
 
@@ -491,18 +514,18 @@ class Waveform extends Observant
   ###
     this is to simulate play
 ###
-  setPlaying : (val = on) ->
+  setPlaying: (val = on) ->
     @isPlaying = val
     return
 
-  setPaused : () ->
+  setPaused: () ->
     @setPlaying off
     return
 
-  isPaused : () ->
+  isPaused: () ->
     @active > 0 and @isPlaying is off
 
-  # an alias to play progress
+# an alias to play progress
   play: (perct) ->
     @playProgress(perct)
     return
@@ -513,7 +536,7 @@ class Waveform extends Observant
     return
 
   playProgress: (perct) ->
-    # indicate that it has started playing
+# indicate that it has started playing
     if @hasStartedPlaying is null
       @hasStartedPlaying = on
 
@@ -526,7 +549,7 @@ class Waveform extends Observant
     @redraw()
     return
 
-  # this is relative to the waves collection
+# this is relative to the waves collection
   calcPercent: ->
     Math.round @clickPercent * @width / (@waveWidth + @iGutterWidth)
 
